@@ -1,0 +1,25 @@
+NAME                                   READY   STATUS    RESTARTS   AGE   IP          NODE        NOMINATED NODE   READINESS GATES
+pod/pva-gitops-demo-5bf6489468-6htmj   1/1     Running   0          12s   10.0.0.10   kwok-node   <none>           <none>
+pod/pva-tf-demo-794c4f9cc8-6bh6m       1/1     Running   0          17s   10.0.0.5    kwok-node   <none>           <none>
+pod/pva-tf-demo-794c4f9cc8-lxkrg       1/1     Running   0          17s   10.0.0.9    kwok-node   <none>           <none>
+pod/store-front-56df6f96cc-4lt9c       1/1     Running   0          12s   10.0.0.6    kwok-node   <none>           <none>
+pod/store-front-56df6f96cc-bpsx5       1/1     Running   0          12s   10.0.0.1    kwok-node   <none>           <none>
+pod/store-front-56df6f96cc-bvzrm       1/1     Running   0          12s   10.0.0.8    kwok-node   <none>           <none>
+
+NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE   SELECTOR
+service/pva-gitops-demo   ClusterIP   10.96.141.161    <none>        8080/TCP   12s   platform.lab/preview=gitops-demo
+service/pva-tf-demo       ClusterIP   10.101.116.180   <none>        80/TCP     17s   platform.lab/preview=tf-demo
+service/store-front       ClusterIP   10.106.170.111   <none>        80/TCP     12s   app=store-front
+
+NAME                              READY   UP-TO-DATE   AVAILABLE   AGE   CONTAINERS   IMAGES       SELECTOR
+deployment.apps/pva-gitops-demo   1/1     1            1           12s   app          nginx:1.27   platform.lab/preview=gitops-demo
+deployment.apps/pva-tf-demo       2/2     2            2           17s   app          nginx:1.27   platform.lab/preview=tf-demo
+deployment.apps/store-front       3/3     3            3           12s   app          nginx:1.27   app=store-front
+
+NAME                                         DESIRED   CURRENT   READY   AGE   CONTAINERS   IMAGES       SELECTOR
+replicaset.apps/pva-gitops-demo-5bf6489468   1         1         1       12s   app          nginx:1.27   platform.lab/preview=gitops-demo,pod-template-hash=5bf6489468
+replicaset.apps/pva-tf-demo-794c4f9cc8       2         2         2       17s   app          nginx:1.27   platform.lab/preview=tf-demo,pod-template-hash=794c4f9cc8
+replicaset.apps/store-front-56df6f96cc       3         3         3       12s   app          nginx:1.27   app=store-front,pod-template-hash=56df6f96cc
+NAME          AGE
+gitops-demo   12s
+tf-demo       17s

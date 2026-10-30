@@ -1,0 +1,3 @@
+configured apps/v1/Deployment/store-front
+unchanged v1/Service/store-front
+unchanged v1/ConfigMap/store-front-config

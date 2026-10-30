@@ -1,0 +1,9 @@
+apiVersion: platform.lab/v1alpha1
+kind: PreviewApp
+metadata:
+  name: gitops-demo
+  namespace: preview
+spec:
+  image: nginx:1.27
+  replicas: 1
+  port: 8080

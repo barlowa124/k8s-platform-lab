@@ -1,0 +1,99 @@
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # kubernetes_config_map.operator will be created
+  + resource "kubernetes_config_map" "operator" {
+      + data = {
+          + "controller"       = "previewctl"
+          + "default_replicas" = "1"
+        }
+      + id   = (known after apply)
+
+      + metadata {
+          + generation       = (known after apply)
+          + name             = "platform-config"
+          + namespace        = "preview"
+          + resource_version = (known after apply)
+          + uid              = (known after apply)
+        }
+    }
+
+  # kubernetes_manifest.demo_app will be created
+  + resource "kubernetes_manifest" "demo_app" {
+      + manifest = {
+          + apiVersion = "platform.lab/v1alpha1"
+          + kind       = "PreviewApp"
+          + metadata   = {
+              + name      = "tf-demo"
+              + namespace = "preview"
+            }
+          + spec       = {
+              + image    = "nginx:1.27"
+              + port     = 80
+              + replicas = 2
+            }
+        }
+      + object   = {
+          + apiVersion = "platform.lab/v1alpha1"
+          + kind       = "PreviewApp"
+          + metadata   = {
+              + annotations                = (known after apply)
+              + creationTimestamp          = (known after apply)
+              + deletionGracePeriodSeconds = (known after apply)
+              + deletionTimestamp          = (known after apply)
+              + finalizers                 = (known after apply)
+              + generateName               = (known after apply)
+              + generation                 = (known after apply)
+              + labels                     = (known after apply)
+              + managedFields              = (known after apply)
+              + name                       = "tf-demo"
+              + namespace                  = "preview"
+              + ownerReferences            = (known after apply)
+              + resourceVersion            = (known after apply)
+              + selfLink                   = (known after apply)
+              + uid                        = (known after apply)
+            }
+          + spec       = {
+              + image    = "nginx:1.27"
+              + port     = 80
+              + replicas = 2
+            }
+        }
+    }
+
+  # kubernetes_namespace.preview will be created
+  + resource "kubernetes_namespace" "preview" {
+      + id                               = (known after apply)
+      + wait_for_default_service_account = false
+
+      + metadata {
+          + generation       = (known after apply)
+          + labels           = {
+              + "app.kubernetes.io/managed-by" = "terraform"
+            }
+          + name             = "preview"
+          + resource_version = (known after apply)
+          + uid              = (known after apply)
+        }
+    }
+
+Plan: 3 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + preview_namespace = "preview"
+kubernetes_namespace.preview: Creating...
+kubernetes_namespace.preview: Creation complete after 0s [id=preview]
+kubernetes_config_map.operator: Creating...
+kubernetes_config_map.operator: Creation complete after 0s [id=preview/platform-config]
+kubernetes_manifest.demo_app: Creating...
+kubernetes_manifest.demo_app: Creation complete after 0s
+
+Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+preview_namespace = "preview"

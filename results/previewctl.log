@@ -1,0 +1,2 @@
+2026/10/30 12:21:48 previewctl watching previewapps in "preview"
+resync gitops-demo: deployments.apps "pva-gitops-demo" is forbidden: unable to create new content in namespace preview because it is being terminated
