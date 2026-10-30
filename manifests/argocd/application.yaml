@@ -1,0 +1,25 @@
+# ArgoCD Application manifest for the gitops-repo manifests.
+# ArgoCD itself is not installed in this user-space cluster. This
+# file is the declaration a real ArgoCD install would pick up and
+# gitopsd plays the sync role here.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: preview-stack
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/barlowa124/k8s-platform-lab.git
+    targetRevision: main
+    path: gitops-repo/deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: preview
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

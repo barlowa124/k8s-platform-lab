@@ -15,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
+	"go.opentelemetry.io/otel/trace"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 )
@@ -26,6 +28,15 @@ type Reconciler struct {
 	Dyn    dynamic.Interface
 	Client kubernetes.Interface
 	NS     string
+	// Metrics and Tracer may be nil; production path wires both.
+	Metrics interface {
+		Record(app string, ready int64, secs float64, err error)
+		SetManaged(n int64)
+	}
+	Tracer interface {
+		Start(ctx context.Context, name string,
+			opts ...trace.SpanStartOption) (context.Context, trace.Span)
+	}
 }
 
 func (r *Reconciler) pvas() dynamic.ResourceInterface {
@@ -33,7 +44,25 @@ func (r *Reconciler) pvas() dynamic.ResourceInterface {
 }
 
 // Reconcile brings the world to the CR's spec and updates status.
-func (r *Reconciler) Reconcile(ctx context.Context, name string) error {
+func (r *Reconciler) Reconcile(ctx context.Context, name string) (err error) {
+	t0 := time.Now()
+	var span trace.Span
+	if r.Tracer != nil {
+		ctx, span = r.Tracer.Start(ctx, "previewapp.reconcile")
+	}
+	ready := int64(-1)
+	defer func() {
+		if span != nil {
+			if err != nil {
+				span.RecordError(err)
+			}
+			span.End()
+		}
+		if r.Metrics != nil && ready >= 0 {
+			r.Metrics.Record(name, ready,
+				time.Since(t0).Seconds(), err)
+		}
+	}()
 	p, err := r.pvas().Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil // deleted; owner ref GC handles children
@@ -49,9 +78,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, name string) error {
 		!apierrors.IsAlreadyExists(err) {
 		return err
 	} else if apierrors.IsAlreadyExists(err) {
-		if _, err := r.Client.AppsV1().Deployments(r.NS).Update(
-			ctx, dep, metav1.UpdateOptions{}); err != nil {
-			return err
+		// Only write on drift: an unconditional Update bumps
+		// .metadata.generation every resync and churns the
+		// deployment controller.
+		cur, gerr := r.Client.AppsV1().Deployments(r.NS).Get(
+			ctx, dep.Name, metav1.GetOptions{})
+		if gerr != nil {
+			return gerr
+		}
+		if !apiequality.Semantic.DeepEqual(cur.Spec, dep.Spec) ||
+			!apiequality.Semantic.DeepEqual(cur.Labels, dep.Labels) {
+			dep.ResourceVersion = cur.ResourceVersion
+			if _, err := r.Client.AppsV1().Deployments(r.NS).Update(
+				ctx, dep, metav1.UpdateOptions{}); err != nil {
+				return err
+			}
 		}
 	}
 	if _, err := r.Client.CoreV1().Services(r.NS).Create(
@@ -62,7 +103,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, name string) error {
 
 	cur, _ := r.Client.AppsV1().Deployments(r.NS).Get(
 		ctx, dep.Name, metav1.GetOptions{})
-	var ready int64
 	if cur != nil {
 		ready = int64(cur.Status.ReadyReplicas)
 	}
@@ -122,6 +162,9 @@ func (r *Reconciler) Run(ctx context.Context, resync time.Duration) error {
 			list, err := r.pvas().List(ctx, metav1.ListOptions{})
 			if err != nil {
 				continue
+			}
+			if r.Metrics != nil {
+				r.Metrics.SetManaged(int64(len(list.Items)))
 			}
 			for i := range list.Items {
 				if err := r.Reconcile(ctx,

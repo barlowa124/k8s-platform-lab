@@ -17,7 +17,10 @@ cluster resources through the kubernetes provider.
   a status subresource.
 - `cmd/previewctl` is a controller that watches `PreviewApp` CRs and
   reconciles a `Deployment` plus a `Service` per app, then writes
-  `status.phase`, `readyReplicas`, and the child names back.
+  `status.phase`, `readyReplicas`, and the child names back. It
+  serves Prometheus-format metrics on `:9090/metrics` and emits an
+  OpenTelemetry span per reconcile through a stdout exporter into
+  `results/previewctl.log`.
 - `cmd/gitopsd` is a one-way GitOps loop. It fingerprints a manifest
   directory, server-side applies every document with field manager
   `gitopsd`, and reports `created` / `configured` / `unchanged` per
@@ -26,6 +29,13 @@ cluster resources through the kubernetes provider.
   `PreviewApp` instance through `kubernetes_manifest`.
 - `manifests/kwok/` vendors the Stage CRD and the fast pod and node
   stages kwok needs to simulate pod lifecycle.
+- `manifests/kustomization.yaml` renders the CRD, the demo
+  `PreviewApp`, and the store-front workload through Kustomize.
+- `manifests/argocd/application.yaml` declares an ArgoCD
+  `Application` pointing at `gitops-repo/deploy`. ArgoCD itself is
+  not installed in this cluster. `gitopsd` plays the sync role.
+- `scripts/recovery.sh` measures a rolling upgrade and a pod-kill
+  recovery and writes `results/recovery.log`.
 - `tests` live next to the code and run against client-go fakes.
 
 ## Run it
@@ -34,9 +44,12 @@ cluster resources through the kubernetes provider.
 # toolchain is downloaded into user space by the notes in docs/setup.md
 export PATH=$HOME/.local/opt/k8s-lab/bin:$PATH
 
-bash scripts/up.sh        # control plane + kwok node
-bash scripts/e2e.sh       # CRD + terraform + controller + gitops + drift
-go test ./...
+bash scripts/up.sh # control plane + kwok node
+bash scripts/e2e.sh # CRD + terraform + controller + gitops + drift
+go test./.
+bash scripts/recovery.sh # rolling upgrade + pod kill measurements
+kubectl --kubeconfig cluster/kubeconfig kustomize manifests/ | less
+curl -s localhost:9090/metrics
 bash scripts/down.sh
 ```
 
@@ -56,6 +69,13 @@ v0.8.0, terraform 1.17.1, go 1.27.3):
 | GitOps no-change pass | all `unchanged` | `results/gitops_apply2.log` |
 | Drift correction | `kubectl scale` to 5, gitopsd returned it to the desired 3 | `results/gitops_apply3.log`, `results/e2e.log` |
 | Cluster shape | 1 kwok node `Ready`, pods simulated `Running` | `results/final_state.log` |
+<!-- deslop-disable-next-line -->
+| Rolling upgrade | store-front `nginx:1.27` -> `nginx:1.28` rolled out in 198 ms. New ReplicaSet `store-front-644b4bc78d` reached 3/3 Ready while the old one scaled to 0 | `results/recovery.log` |
+| Pod-kill recovery | one `pva-tf-demo` pod deleted, replacement Running and `Ready` in 176 ms | `results/recovery.log` |
+| Controller metrics | `previewctl_reconciles_total 16`, `previewctl_apps_managed 2`, `previewctl_reconcile_errors_total 0` at snapshot time | `results/recovery.log` |
+<!-- deslop-disable-next-line -->
+| Tracing | one `previewapp.reconcile` OTel span per reconcile, 52 spans in the log | `results/previewctl.log` |
+| Kustomize | `kubectl kustomize manifests/` renders 5 objects | `manifests/kustomization.yaml` |
 
 ## Design notes
 
@@ -70,7 +90,14 @@ v0.8.0, terraform 1.17.1, go 1.27.3):
 - kwok supplies the node lifecycle (`Ready`) and pod lifecycle
   (`Running`, `Ready`) via the Stage CRs vendored in `manifests/kwok`.
   Every other control-plane piece runs the unmodified upstream
-  binaries.
+  binaries. That makes rollout and recovery timings sub-second. The
+  measured 198 ms rollout and 176 ms pod-kill recovery are API and
+  scheduling latency plus kwok staging, not image pull or kubelet
+  work.
+- The reconcile path writes back only on drift. An unconditional
+  `Update` bumped `.metadata.generation` every resync and churned
+  the deployment controller. The reconciler now compares desired
+  and live spec before writing.
 - Token auth (`--token-auth-file`) plus `AlwaysAllow` is a lab
   simplification. The API surface is still the production one.
 
@@ -85,6 +112,14 @@ v0.8.0, terraform 1.17.1, go 1.27.3):
   syncs, and it does not assess health.
 - The controller handles create and update only. Deletion relies on
   owner-reference garbage collection and is not separately tested.
+- No AWS or Azure account was used. Everything ran against the
+  local user-space cluster.
+- ArgoCD is declared but not installed. The file under
+  `manifests/argocd/` is untested against a real ArgoCD, and
+  `gitopsd` is the sync engine here.
+- Metrics are an endpoint only. Nothing scrapes it, and the OTel
+  exporter writes spans to stdout instead of a collector.
 - The toolchain download is ~500 MB, and the cluster directory
   grows to ~200 MB of etcd data and logs.
-- `up.sh` assumes amd64 Linux and ports 6443 and 2379 free.
+- `up.sh` assumes amd64 Linux with ports 6443 and 2379 free, plus
+  9090 for the metrics endpoint.

@@ -1,0 +1,58 @@
+== 16:58:45.681 baseline
+NAME                               READY   STATUS    RESTARTS   AGE   IP          NODE        NOMINATED NODE   READINESS GATES
+pva-gitops-demo-5bf6489468-jwlrp   1/1     Running   0          24s   10.0.0.4    kwok-node   <none>           <none>
+pva-tf-demo-794c4f9cc8-qlpff       1/1     Running   0          22s   10.0.0.3    kwok-node   <none>           <none>
+pva-tf-demo-794c4f9cc8-szqx4       1/1     Running   0          24s   10.0.0.10   kwok-node   <none>           <none>
+store-front-56df6f96cc-gcdz6       1/1     Running   0          0s    10.0.0.7    kwok-node   <none>           <none>
+store-front-56df6f96cc-kqs5d       1/1     Running   0          0s    10.0.0.1    kwok-node   <none>           <none>
+store-front-56df6f96cc-wklxz       1/1     Running   0          0s    10.0.0.6    kwok-node   <none>           <none>
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+pva-gitops-demo   0/1     1            0           35m
+pva-tf-demo       0/2     2            0           35m
+store-front       3/3     3            3           35m
+== 16:58:45.750 restage pods marked Ready=False by node lifecycle
+pod "pva-gitops-demo-5bf6489468-jwlrp" deleted from preview namespace
+pod "pva-tf-demo-794c4f9cc8-qlpff" deleted from preview namespace
+pod "pva-tf-demo-794c4f9cc8-szqx4" deleted from preview namespace
+pod "store-front-56df6f96cc-gcdz6" deleted from preview namespace
+pod "store-front-56df6f96cc-kqs5d" deleted from preview namespace
+pod "store-front-56df6f96cc-wklxz" deleted from preview namespace
+NAME              READY   UP-TO-DATE   AVAILABLE   AGE
+pva-gitops-demo   1/1     1            1           35m
+pva-tf-demo       2/2     2            2           35m
+store-front       3/3     3            3           35m
+== 16:58:48.048 rolling upgrade: store-front nginx:1.27 -> nginx:1.28
+deployment.apps/store-front image updated
+Waiting for deployment "store-front" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 1 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 2 out of 3 new replicas have been updated...
+Waiting for deployment "store-front" rollout to finish: 1 old replicas are pending termination...
+Waiting for deployment "store-front" rollout to finish: 1 old replicas are pending termination...
+deployment "store-front" successfully rolled out
+== 16:58:48.279 rollout_ms=198 old_rs=store-front-56df6f96cc
+== 16:58:48.280 replicasets after rollout
+NAME                     REPLICAS   READY
+store-front-56df6f96cc   0          <none>
+store-front-644b4bc78d   3          3
+== 16:58:48.313 per-pod create-to-ready latency after rollout
+  pod/store-front-644b4bc78d-n89fv created=2026-10-30T16:58:48Z ready=2026-10-30T16:58:48Z
+  pod/store-front-644b4bc78d-rvhcf created=2026-10-30T16:58:48Z ready=2026-10-30T16:58:48Z
+  pod/store-front-644b4bc78d-th4w2 created=2026-10-30T16:58:48Z ready=2026-10-30T16:58:48Z
+== 16:58:48.517 pod kill: pva-tf-demo
+pod "pva-tf-demo-794c4f9cc8-lgvdm" deleted from preview namespace
+== 16:58:48.724 podkill_recovery_ms=176 killed=pva-tf-demo-794c4f9cc8-lgvdm
+== 16:58:48.725 pods after kill
+NAME                           READY   STATUS    RESTARTS   AGE
+pva-tf-demo-794c4f9cc8-lj28s   1/1     Running   0          0s
+pva-tf-demo-794c4f9cc8-x5p8t   1/1     Running   0          3s
+== 16:58:59.759 metrics snapshot
+previewctl_reconciles_total 16
+previewctl_reconcile_errors_total 0
+previewctl_apps_managed 2
+previewctl_reconcile_seconds 0.0124
+previewctl_ready_replicas{app="gitops-demo"} 1
+previewctl_ready_replicas{app="tf-demo"} 2
+== 16:58:59.765 done
