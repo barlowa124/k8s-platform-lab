@@ -43,7 +43,7 @@ pgrep -f "kube-apiserver --etcd-servers" >/dev/null || {
         > "$D/logs/apiserver.log" 2>&1 &
 }
 for i in $(seq 60); do
-    curl -sk https://127.0.0.1:6443/readyz >/dev/null 2>&1 && break
+    curl -sfk https://127.0.0.1:6443/readyz >/dev/null 2>&1 && break
     sleep 0.5
 done
 
